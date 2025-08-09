@@ -4,24 +4,43 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
+    "dev:mock": "cross-env APP_ENV=mock next dev --turbopack",
+    "dev:dev": "cross-env APP_ENV=dev next dev --turbopack",
+    "dev:release": "cross-env APP_ENV=release next dev --turbopack",
     "build": "next build",
+    "build:dev": "cross-env APP_ENV=dev next build",
+    "build:release": "cross-env APP_ENV=release next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@heroicons/react": "^2.2.0",
+    "@mapbox/mapbox-gl-geocoder": "^5.0.2",
+    "clsx": "^2.1.1",
+    "drizzle-kit": "^0.29.0",
+    "drizzle-orm": "^0.35.3",
+    "mapbox-gl": "^3.8.0",
+    "next": "15.4.6",
+    "next-intl": "^3.22.4",
+    "postgres": "^3.4.4",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "next": "15.4.6"
+    "zod": "^3.24.1"
   },
   "devDependencies": {
-    "typescript": "^5",
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@tailwindcss/postcss": "^4",
-    "tailwindcss": "^4",
+    "cross-env": "^7.0.3",
     "eslint": "^9",
     "eslint-config-next": "15.4.6",
-    "@eslint/eslintrc": "^3"
+    "tailwindcss": "^4",
+    "typescript": "^5"
   }
 }
