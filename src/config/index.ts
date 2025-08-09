@@ -4,9 +4,11 @@ import { releaseConfig } from './environments/release';
 import type { AppConfig, Environment } from './types';
 
 function getEnvironment(): Environment {
-  // Check for explicit APP_ENV override
-  if (process.env.APP_ENV) {
-    const env = process.env.APP_ENV as Environment;
+  // Use NEXT_PUBLIC_APP_ENV for both client and server
+  const appEnv = process.env.NEXT_PUBLIC_APP_ENV || process.env.APP_ENV;
+  
+  if (appEnv) {
+    const env = appEnv as Environment;
     if (['mock', 'dev', 'release'].includes(env)) {
       return env;
     }

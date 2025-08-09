@@ -1,9 +1,11 @@
 'use client';
 
-import { config } from '@/config';
+import { useConfig } from '@/hooks/useConfig';
 
 export function EnvironmentBanner() {
-  if (!config.ui.showEnvironmentBanner) {
+  const { config, loading } = useConfig();
+
+  if (loading || !config || !config.ui.showEnvironmentBanner) {
     return null;
   }
 
