@@ -4,12 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "dev:mock": "cross-env APP_ENV=mock next dev --turbopack",
-    "dev:dev": "cross-env APP_ENV=dev next dev --turbopack",
-    "dev:release": "cross-env APP_ENV=release next dev --turbopack",
+    "dev:mock": "cross-env NEXT_PUBLIC_APP_ENV=mock next dev --turbopack",
+    "dev:dev": "cross-env NEXT_PUBLIC_APP_ENV=dev next dev --turbopack",
+    "dev:release": "cross-env NEXT_PUBLIC_APP_ENV=release next dev --turbopack",
     "build": "next build",
-    "build:dev": "cross-env APP_ENV=dev next build",
-    "build:release": "cross-env APP_ENV=release next build",
+    "build:dev": "cross-env NEXT_PUBLIC_APP_ENV=dev next build",
+    "build:release": "cross-env NEXT_PUBLIC_APP_ENV=release next build",
     "start": "next start",
     "lint": "next lint",
     "commit": "node scripts/commit.js",
@@ -18,7 +18,8 @@
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
     "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "db:seed": "npx tsx scripts/seed-database.ts"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
@@ -44,6 +45,7 @@
     "eslint": "^9",
     "eslint-config-next": "15.4.6",
     "tailwindcss": "^4",
+    "tsx": "^4.20.3",
     "typescript": "^5"
   }
 }

@@ -67,7 +67,8 @@ export async function GET(request: NextRequest) {
       params.filters = filters;
     }
 
-    const results = await schoolService().search(params);
+    const service = schoolService();
+    const results = await service.search(params);
 
     return Response.json(results);
   } catch (error) {

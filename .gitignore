@@ -67,3 +67,6 @@ logs/
 
 # Screenshots (for documentation, keep selective ones)
 Screenshot*.png
+
+# Claude Code configuration
+.claude/
