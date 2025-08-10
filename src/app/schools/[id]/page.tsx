@@ -18,17 +18,30 @@ import {
 } from '@heroicons/react/24/outline';
 import type { School, Zone } from '@/types';
 import { getMockZoneAreas } from '@/data/mockZones';
+import dynamic from 'next/dynamic';
+
+// Dynamically import the map components to avoid SSR issues
+const SchoolZoneMap = dynamic(
+  () => import('@/components/map/SchoolZoneMap'),
+  { ssr: false }
+);
+
+const FullscreenZoneMap = dynamic(
+  () => import('@/components/map/FullscreenZoneMap'),
+  { ssr: false }
+);
 
 export default function SchoolDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const schoolId = params.id as string;
+  const schoolId = typeof params.id === 'string' ? params.id : Array.isArray(params.id) ? params.id[0] : '';
   
   const [school, setSchool] = useState<School | null>(null);
   const [zone, setZone] = useState<Zone | null>(null);
   const [nearbySchools, setNearbySchools] = useState<School[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showFullscreenMap, setShowFullscreenMap] = useState(false);
 
   useEffect(() => {
     const fetchSchoolData = async () => {
@@ -317,6 +330,48 @@ export default function SchoolDetailPage() {
               </div>
             </div>
 
+            {/* School Zone Map - Main Content */}
+            {school.hasZone && school.location && (
+              <div className="bg-white rounded-lg shadow-md overflow-hidden">
+                <div className="p-6 border-b border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center mb-2">
+                        <HomeIcon className="h-5 w-5 text-blue-600 mr-2" />
+                        <h3 className="text-xl font-semibold text-gray-900">School Enrolment Zone</h3>
+                      </div>
+                      <p className="text-gray-600">Interactive map showing zone boundaries and school location</p>
+                    </div>
+                    <button 
+                      onClick={() => setShowFullscreenMap(true)}
+                      className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                      </svg>
+                      View Fullscreen
+                    </button>
+                  </div>
+                </div>
+                <SchoolZoneMap school={school} className="h-96" />
+                <div className="p-4 bg-gray-50 border-t border-gray-200">
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center space-x-4">
+                      <div className="flex items-center">
+                        <div className="w-4 h-3 bg-green-400 opacity-20 border border-green-600 rounded mr-2"></div>
+                        <span className="text-gray-600">School Zone</span>
+                      </div>
+                      <div className="flex items-center">
+                        <div className="w-3 h-3 bg-blue-600 rounded-full border-2 border-white mr-2"></div>
+                        <span className="text-gray-600">School Location</span>
+                      </div>
+                    </div>
+                    <span className="text-gray-500">Use + / - to zoom • Drag to pan</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Nearby Schools */}
             {nearbySchools.length > 0 && (
               <div className="bg-white rounded-lg shadow-md p-6">
@@ -359,7 +414,7 @@ export default function SchoolDetailPage() {
               <div className="bg-white rounded-lg shadow-md p-6">
                 <div className="flex items-center mb-4">
                   <HomeIcon className="h-5 w-5 text-blue-600 mr-2" />
-                  <h3 className="text-lg font-semibold text-gray-900">Enrolment Zone</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">Zone Details</h3>
                 </div>
                 
                 {zone ? (
@@ -494,6 +549,15 @@ export default function SchoolDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Fullscreen Map Modal */}
+      {school && (
+        <FullscreenZoneMap
+          school={school}
+          isOpen={showFullscreenMap}
+          onClose={() => setShowFullscreenMap(false)}
+        />
+      )}
     </div>
   );
 }
