@@ -1,6 +1,7 @@
 import { db } from '../db';
 import { schools, zones } from '../schema';
 import { eq, sql } from 'drizzle-orm';
+import { getMockZoneBySchoolId, getMockZoneAreas } from '@/data/mockZones';
 import type { Zone, ZoneCheckResponse, Location } from '@/types';
 
 export class ZoneService {
@@ -29,6 +30,13 @@ export class ZoneService {
   }
 
   static async getZoneBySchoolId(schoolId: string): Promise<Zone | null> {
+    // For development, use mock data
+    const mockZone = getMockZoneBySchoolId(schoolId);
+    if (mockZone) {
+      return mockZone;
+    }
+
+    // Fallback to database query
     const result = await db
       .select({
         id: zones.id,
