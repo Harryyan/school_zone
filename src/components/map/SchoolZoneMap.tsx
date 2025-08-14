@@ -275,6 +275,7 @@ export default function SchoolZoneMap({ school, className = '' }: SchoolZoneMapP
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
+  const [mapError, setMapError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
@@ -282,27 +283,37 @@ export default function SchoolZoneMap({ school, className = '' }: SchoolZoneMapP
     // Set your Mapbox access token
     const token = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
     
-    // Handle mock environment
-    if (token === 'mock_token') {
-      console.warn('Using mock Mapbox token. Map functionality will be limited.');
-      mapboxgl.accessToken = 'pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw';
-    } else {
-      mapboxgl.accessToken = token || 'pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw';
-    }
+    // Use a public Mapbox token for demo/mock purposes
+    mapboxgl.accessToken = token && token !== 'mock_token' 
+      ? token 
+      : 'pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw';
 
-    // Initialize the map
+    // Initialize the map with better initial settings
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/streets-v11',
+      style: 'mapbox://styles/mapbox/streets-v12', // Use newer streets style
       center: school.location ? [school.location.lng, school.location.lat] : [174.7762, -36.8735], // Default to Auckland Grammar School
-      zoom: 13
+      zoom: 11, // Start with a wider view to show context
+      pitch: 0, // Keep flat for zone viewing
+      bearing: 0
     });
 
     // Add navigation control
     map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
+    // Add error handling
+    map.current.on('error', (e) => {
+      console.error('Mapbox error:', e);
+      if (e.error?.message?.includes('403') || e.error?.message?.includes('Forbidden')) {
+        setMapError('Invalid Mapbox token. Please check MAPBOX_SETUP.md for instructions.');
+      } else {
+        setMapError('Failed to load map. Please check your internet connection.');
+      }
+    });
+
     map.current.on('load', () => {
       setIsMapLoaded(true);
+      setMapError(null);
       
       // Add the school zone data
       if (map.current) {
@@ -312,14 +323,14 @@ export default function SchoolZoneMap({ school, className = '' }: SchoolZoneMapP
           data: MOCK_ZONE_DATA
         });
 
-        // Add zone fill layer (light green with transparency)
+        // Add zone fill layer with lower opacity to show streets underneath
         map.current.addLayer({
           id: 'zone-fill',
           type: 'fill',
           source: 'school-zone',
           paint: {
             'fill-color': '#10b981', // Green color
-            'fill-opacity': 0.2
+            'fill-opacity': 0.15 // Lower opacity to show streets underneath
           }
         });
 
@@ -330,8 +341,8 @@ export default function SchoolZoneMap({ school, className = '' }: SchoolZoneMapP
           source: 'school-zone',
           paint: {
             'line-color': '#059669', // Darker green for border
-            'line-width': 2,
-            'line-opacity': 0.8
+            'line-width': 3, // Slightly thicker border
+            'line-opacity': 0.9
           }
         });
 
@@ -367,15 +378,22 @@ export default function SchoolZoneMap({ school, className = '' }: SchoolZoneMapP
           marker.setPopup(popup);
         }
 
-        // Fit the map to show the zone
-        const bounds = new mapboxgl.LngLatBounds();
-        MOCK_ZONE_DATA.geometry.coordinates[0].forEach(coord => {
-          bounds.extend(coord as [number, number]);
-        });
-        
-        map.current.fitBounds(bounds, {
-          padding: 50
-        });
+        // Instead of fitting to zone bounds, center on school with good zoom level
+        if (school.location) {
+          map.current.setCenter([school.location.lng, school.location.lat]);
+          map.current.setZoom(13); // Good zoom level to see both zone and streets
+        } else {
+          // Fallback: fit to zone with reasonable padding
+          const bounds = new mapboxgl.LngLatBounds();
+          MOCK_ZONE_DATA.geometry.coordinates[0].forEach(coord => {
+            bounds.extend(coord as [number, number]);
+          });
+          
+          map.current.fitBounds(bounds, {
+            padding: 100,
+            maxZoom: 14 // Don't zoom in too much
+          });
+        }
       }
     });
 
@@ -392,11 +410,32 @@ export default function SchoolZoneMap({ school, className = '' }: SchoolZoneMapP
     <div className={`relative ${className}`}>
       <div ref={mapContainer} className="w-full h-full rounded-lg overflow-hidden" />
       
-      {!isMapLoaded && (
+      {!isMapLoaded && !mapError && (
         <div className="absolute inset-0 bg-gray-100 rounded-lg flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
             <div className="text-sm text-gray-600">Loading map...</div>
+          </div>
+        </div>
+      )}
+
+      {mapError && (
+        <div className="absolute inset-0 bg-red-50 rounded-lg flex items-center justify-center p-4">
+          <div className="text-center">
+            <div className="text-red-500 mb-2">
+              <svg className="h-12 w-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+            </div>
+            <div className="text-sm text-red-700 mb-2 font-medium">Map Loading Error</div>
+            <div className="text-xs text-red-600 max-w-sm mx-auto">{mapError}</div>
+            {mapError.includes('token') && (
+              <div className="text-xs text-blue-600 mt-2">
+                <a href="/MAPBOX_SETUP.md" target="_blank" className="underline hover:text-blue-800">
+                  View Setup Guide
+                </a>
+              </div>
+            )}
           </div>
         </div>
       )}

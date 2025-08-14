@@ -285,6 +285,7 @@ export default function FullscreenZoneMap({ school, isOpen, onClose }: Fullscree
   const searchMarker = useRef<mapboxgl.Marker | null>(null);
   
   const [isMapLoaded, setIsMapLoaded] = useState(false);
+  const [mapError, setMapError] = useState<string | null>(null);
   const [searchAddress, setSearchAddress] = useState('');
   const [searchResult, setSearchResult] = useState<SearchResult | null>(null);
   const [isSearching, setIsSearching] = useState(false);
@@ -384,26 +385,38 @@ export default function FullscreenZoneMap({ school, isOpen, onClose }: Fullscree
 
     // Set Mapbox token
     const token = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
-    if (token === 'mock_token') {
-      console.warn('Using mock Mapbox token. Map functionality will be limited.');
-      mapboxgl.accessToken = 'pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw';
-    } else {
-      mapboxgl.accessToken = token || 'pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw';
-    }
+    
+    // Use a public Mapbox token for demo/mock purposes
+    mapboxgl.accessToken = token && token !== 'mock_token' 
+      ? token 
+      : 'pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw';
 
     // Initialize the map
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/streets-v11',
+      style: 'mapbox://styles/mapbox/streets-v12',
       center: school.location ? [school.location.lng, school.location.lat] : [174.7762, -36.8735],
-      zoom: 12
+      zoom: 12,
+      pitch: 0,
+      bearing: 0
     });
 
     // Add navigation control
     map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
+    // Add error handling
+    map.current.on('error', (e) => {
+      console.error('Mapbox error:', e);
+      if (e.error?.message?.includes('403') || e.error?.message?.includes('Forbidden')) {
+        setMapError('Invalid Mapbox token. Please check MAPBOX_SETUP.md for instructions.');
+      } else {
+        setMapError('Failed to load map. Please check your internet connection.');
+      }
+    });
+
     map.current.on('load', () => {
       setIsMapLoaded(true);
+      setMapError(null);
       
       if (map.current) {
         // Add zone data
@@ -412,14 +425,14 @@ export default function FullscreenZoneMap({ school, isOpen, onClose }: Fullscree
           data: MOCK_ZONE_DATA
         });
 
-        // Add zone fill layer
+        // Add zone fill layer with lower opacity
         map.current.addLayer({
           id: 'zone-fill',
           type: 'fill',
           source: 'school-zone',
           paint: {
             'fill-color': '#10b981',
-            'fill-opacity': 0.2
+            'fill-opacity': 0.15 // Lower opacity to show streets underneath
           }
         });
 
@@ -430,8 +443,8 @@ export default function FullscreenZoneMap({ school, isOpen, onClose }: Fullscree
           source: 'school-zone',
           paint: {
             'line-color': '#059669',
-            'line-width': 2,
-            'line-opacity': 0.8
+            'line-width': 3,
+            'line-opacity': 0.9
           }
         });
 
@@ -464,13 +477,22 @@ export default function FullscreenZoneMap({ school, isOpen, onClose }: Fullscree
           schoolMarker.setPopup(schoolPopup);
         }
 
-        // Fit the map to show the zone
-        const bounds = new mapboxgl.LngLatBounds();
-        MOCK_ZONE_DATA.geometry.coordinates[0].forEach(coord => {
-          bounds.extend(coord as [number, number]);
-        });
-        
-        map.current.fitBounds(bounds, { padding: 50 });
+        // Center the map on the school with appropriate zoom
+        if (school.location) {
+          map.current.setCenter([school.location.lng, school.location.lat]);
+          map.current.setZoom(13); // Good balance between zone visibility and street detail
+        } else {
+          // Fallback: fit to zone with reasonable constraints
+          const bounds = new mapboxgl.LngLatBounds();
+          MOCK_ZONE_DATA.geometry.coordinates[0].forEach(coord => {
+            bounds.extend(coord as [number, number]);
+          });
+          
+          map.current.fitBounds(bounds, { 
+            padding: 100,
+            maxZoom: 14
+          });
+        }
       }
     });
 
@@ -551,11 +573,38 @@ export default function FullscreenZoneMap({ school, isOpen, onClose }: Fullscree
         <div className="flex-1 relative">
           <div ref={mapContainer} className="w-full h-full" />
           
-          {!isMapLoaded && (
+          {!isMapLoaded && !mapError && (
             <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
                 <div className="text-sm text-gray-600">Loading fullscreen map...</div>
+              </div>
+            </div>
+          )}
+
+          {mapError && (
+            <div className="absolute inset-0 bg-red-50 flex items-center justify-center p-8">
+              <div className="text-center max-w-md">
+                <div className="text-red-500 mb-4">
+                  <svg className="h-16 w-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-medium text-red-700 mb-2">Map Loading Error</h3>
+                <p className="text-sm text-red-600 mb-4">{mapError}</p>
+                {mapError.includes('token') && (
+                  <div className="bg-white rounded-lg p-4 border border-red-200">
+                    <h4 className="font-medium text-gray-900 mb-2">Quick Fix:</h4>
+                    <ol className="text-left text-sm text-gray-700 space-y-1">
+                      <li>1. Sign up at <a href="https://mapbox.com" target="_blank" className="text-blue-600 underline">mapbox.com</a></li>
+                      <li>2. Get your access token</li>
+                      <li>3. Update NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN</li>
+                    </ol>
+                    <a href="/MAPBOX_SETUP.md" target="_blank" className="inline-block mt-3 text-blue-600 underline hover:text-blue-800">
+                      View detailed setup guide →
+                    </a>
+                  </div>
+                )}
               </div>
             </div>
           )}

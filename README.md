@@ -18,7 +18,7 @@ A comprehensive web application for discovering primary and secondary schools in
 - **Backend**: Next.js API Routes, Node.js
 - **Database**: PostgreSQL 15 with PostGIS 3.3
 - **ORM**: Drizzle ORM
-- **Maps**: Mapbox GL JS (planned)
+- **Maps**: Mapbox GL JS with interactive zone visualization
 - **Geocoding**: Pluggable geocoding service
 - **Infrastructure**: Docker, Docker Compose
 
